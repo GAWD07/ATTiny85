@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ATTiny85 Registry Command Builder – 50+ Presets</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #1e1e2f; color: #ddd; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .warning {
+            background: #ffdddd; color: #990000; padding: 12px; border-radius: 8px;
+            border-left: 6px solid #cc0000; margin-bottom: 20px; font-weight: bold;
+        }
+        h1 { color: #fff; border-bottom: 2px solid #4a6fa5; padding-bottom: 10px; }
+        .container { display: flex; flex-wrap: wrap; gap: 20px; }
+        .panel {
+            background: #2d2d44; padding: 20px; border-radius: 12px;
+            flex: 1 1 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .panel h2 { margin-top: 0; color: #8ab4f8; }
+        label { display: block; margin: 10px 0 4px; font-weight: 500; }
+        input, select, textarea {
+            width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #555;
+            background: #1e1e32; color: #eee;
+        }
+        input:focus, select:focus { outline: 2px solid #4a6fa5; }
+        .btn-group { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+        button {
+            padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;
+            font-weight: 600; transition: background 0.2s; flex: 1 1 auto;
+        }
+        .btn-add { background: #4a6fa5; color: white; }
+        .btn-add:hover { background: #5a7fb5; }
+        .btn-remove { background: #a54a4a; color: white; }
+        .btn-remove:hover { background: #b55a5a; }
+        .btn-copy { background: #4caf50; color: white; }
+        .btn-copy:hover { background: #66bb6a; }
+        .btn-clear { background: #888; color: white; }
+        .btn-clear:hover { background: #999; }
+        .btn-load { background: #ff9800; color: #000; }
+        .btn-load:hover { background: #ffa726; }
+        .sequence-list {
+            background: #1a1a2e; padding: 10px; border-radius: 6px;
+            max-height: 300px; overflow-y: auto; margin: 10px 0; font-size: 0.9em;
+        }
+        .sequence-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 10px; border-bottom: 1px solid #333;
+        }
+        .sequence-item:last-child { border-bottom: none; }
+        .seq-index { font-weight: bold; color: #8ab4f8; margin-right: 10px; }
+        .seq-action { flex: 1; }
+        .seq-action.enable { color: #8bc34a; }
+        .seq-action.disable { color: #ff8a80; }
+        .code-area {
+            background: #0d0d1a; padding: 15px; border-radius: 8px; margin-top: 10px;
+            white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow: auto;
+            font-family: 'Courier New', monospace; font-size: 0.85em; border: 1px solid #444;
+        }
+        .flex-row { display: flex; gap: 10px; align-items: center; }
+        .flex-row input { flex: 1; }
+        .inline-label { display: inline-block; width: auto; margin-right: 5px; }
+        .small-note { font-size: 0.8em; color: #aaa; margin-top: 6px; }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 12px;
+            font-size: 0.7em; font-weight: bold;
+        }
+        .badge-enable { background: #2e7d32; color: #a5d6a7; }
+        .badge-disable { background: #7d2e2e; color: #ffab91; }
+        .preset-select { width: 100%; padding: 8px; background: #1e1e32; color: #eee; border-radius: 6px; border: 1px solid #555; }
+        .preset-select optgroup { background: #2d2d44; color: #ddd; }
+        footer { margin-top: 30px; text-align: center; font-size: 0.8em; color: #888; border-top: 1px solid #333; padding-top: 20px; }
+        @media (max-width: 700px) { .panel { flex: 1 1 100%; } }
+        .quick-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .quick-btns button { flex: 0 1 auto; padding: 4px 12px; font-size: 0.8em; background: #3a3a5c; color: #ddd; border: none; border-radius: 4px; cursor: pointer; }
+        .quick-btns button:hover { background: #4a4a7c; }
+    </style>
+</head>
+<body>
+    <div class="warning">
+        ⚠️ <strong>WARNING:</strong> This tool modifies the Windows Registry. Use only on systems you own.
+        Incorrect changes can break your system. Always back up first.
+    </div>
+    <h1>🖥️ ATTiny85 Registry Command Builder – 50+ Presets</h1>
+    <p style="color: #bbb;">
+        Select a preset, then click <strong>Add Enable</strong> or <strong>Add Disable</strong> to build a sequence.
+        The generated Arduino code will execute all commands when the ATTiny85 is plugged in.
+    </p>
+
+    <div class="container">
+        <!-- Left Panel: Builder -->
+        <div class="panel" style="flex: 2;">
+            <h2>📋 Build Sequence</h2>
+
+            <!-- Preset Loader -->
+            <div style="margin-bottom: 12px;">
+                <label>📂 Load Preset</label>
+                <div class="flex-row">
+                    <select id="presetSelect" class="preset-select"></select>
+                    <button class="btn-load" onclick="loadPresetFromDropdown()">Load</button>
+                </div>
+                <div class="small-note">Choose a preset, then click Load to fill the fields below.</div>
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <label>Registry Path (HKLM\...)</label>
+                <input id="regPath" type="text" value="SYSTEM\CurrentControlSet\Control\Terminal Server" />
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="flex: 1;">
+                    <label>Value Name</label>
+                    <input id="valName" type="text" value="fDenyTSConnections" />
+                </div>
+                <div style="flex: 1;">
+                    <label>Value Type</label>
+                    <select id="valType">
+                        <option value="REG_DWORD">REG_DWORD</option>
+                        <option value="REG_SZ">REG_SZ</option>
+                        <option value="REG_EXPAND_SZ">REG_EXPAND_SZ</option>
+                        <option value="REG_BINARY">REG_BINARY</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="flex: 1;">
+                    <label>Enable Value</label>
+                    <input id="enableVal" type="text" value="0" />
+                </div>
+                <div style="flex: 1;">
+                    <label>Disable Value</label>
+                    <input id="disableVal" type="text" value="1" />
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn-add" onclick="addAction('enable')">➕ Add Enable</button>
+                <button class="btn-add" onclick="addAction('disable')">➖ Add Disable</button>
+                <button class="btn-clear" onclick="clearSequence()">🗑️ Clear All</button>
+            </div>
+            <div style="margin-top: 10px;">
+                <label>Current Sequence (<span id="seqCount">0</span> actions)</label>
+                <div id="sequenceList" class="sequence-list">
+                    <div style="color: #666; text-align: center; padding: 20px;">No actions added yet.</div>
+                </div>
+            </div>
+            <div style="margin-top: 10px;">
+                <button class="btn-copy" onclick="copyCode()">📋 Copy Generated Code</button>
+            </div>
+        </div>
+
+        <!-- Right Panel: Live Code -->
+        <div class="panel" style="flex: 3;">
+            <h2>⚙️ Generated Arduino Code</h2>
+            <div class="code-area" id="codeDisplay">
+                // No actions – sequence is empty.
+            </div>
+            <div class="small-note">
+                💡 Upload this code to your ATTiny85 (Digispark). The device will act as a USB keyboard
+                and execute the registry commands in sequence.
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Preset Buttons (most common) -->
+    <div class="panel" style="margin-top: 20px;">
+        <h2>🚀 Quick Presets (click to load)</h2>
+        <div class="quick-btns" id="quickPresets"></div>
+    </div>
+
+    <footer>
+        <p>This tool generates Arduino code for the Digispark ATTiny85. Always obtain proper authorization before using.</p>
+    </footer>
+
+    <script>
+        // ====================================================
+        // PRESET DEFINITIONS – 50+ registry tweaks
+        // ====================================================
+        // For each preset, "enable" restores normal Windows behaviour and
+        // "disable" applies the restriction / lock-down. Paths are relative to
+        // HKLM (the generated reg command prepends "HKLM\"). A leading "0x" or a
+        // plain decimal both work for REG_DWORD data.
+        const PRESETS = [
+            // ----- Startup & Logon -----
+            { category: 'Startup & Logon', label: 'Run a Program at Startup (all users) – set custom path',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run', name: 'MyApp', type: 'REG_SZ', enable: '', disable: 'C:\\Windows\\System32\\notepad.exe' },
+            { category: 'Startup & Logon', label: 'Run a Program Once at Next Logon – set custom path',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce', name: 'MyApp', type: 'REG_SZ', enable: '', disable: 'C:\\Windows\\System32\\notepad.exe' },
+            { category: 'Startup & Logon', label: 'Automatic Admin Logon',
+              path: 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon', name: 'AutoAdminLogon', type: 'REG_SZ', enable: '0', disable: '1' },
+            { category: 'Startup & Logon', label: 'Hide Last Logged-On User Name',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'dontdisplaylastusername', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Startup & Logon', label: 'Logon Banner Caption (legal notice title)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'legalnoticecaption', type: 'REG_SZ', enable: '', disable: 'Authorized Users Only' },
+            { category: 'Startup & Logon', label: 'Logon Banner Text (legal notice body)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'legalnoticetext', type: 'REG_SZ', enable: '', disable: 'This system is for authorized use only.' },
+
+            // ----- Control Panel & Settings -----
+            { category: 'Control Panel', label: 'Control Panel & Settings App',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoControlPanel', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Control Panel', label: 'Restrict Specified Control Panel Applets (RestrictCpl mode)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'RestrictCpl', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Control Panel', label: 'Allow Only Specified Applets (DisallowCpl mode)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'DisallowCpl', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Control Panel', label: 'Display / Personalization Applet',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'NoDispCPL', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Control Panel', label: 'Add or Remove Programs / Programs & Features',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Uninstall', name: 'NoAddRemovePrograms', type: 'REG_DWORD', enable: '0', disable: '1' },
+
+            // ----- Explorer, Files & Drives -----
+            { category: 'Files & Drives', label: 'Hide All Local Drives',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoDrives', type: 'REG_DWORD', enable: '0', disable: '0x03ffffff' },
+            { category: 'Files & Drives', label: 'Restrict Access to All Drives (block browsing)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoViewOnDrive', type: 'REG_DWORD', enable: '0', disable: '0x03ffffff' },
+            { category: 'Files & Drives', label: 'Folder Options Dialog',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoFolderOptions', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Files & Drives', label: 'Show Hidden Files (1=show, 2=hide)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced', name: 'Hidden', type: 'REG_DWORD', enable: '1', disable: '2' },
+            { category: 'Files & Drives', label: 'Show Known File Extensions (0=show, 1=hide)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced', name: 'HideFileExt', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Files & Drives', label: 'Recent Documents History',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoRecentDocsHistory', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Files & Drives', label: 'Clear Recent Docs on Exit',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'ClearRecentDocsOnExit', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Files & Drives', label: 'Network Neighborhood (Net Hood)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoNetHood', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Files & Drives', label: 'Hide All Desktop Icons',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoDesktop', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Files & Drives', label: 'Save Explorer Settings on Exit',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoSaveSettings', type: 'REG_DWORD', enable: '0', disable: '1' },
+
+            // ----- Right-Click & Context Menus -----
+            { category: 'Right-Click', label: 'Desktop / Explorer Right-Click Menu',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoViewContextMenu', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Right-Click', label: 'Taskbar Right-Click Menu',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoTrayContextMenu', type: 'REG_DWORD', enable: '0', disable: '1' },
+
+            // ----- Taskbar & Start Menu -----
+            { category: 'Taskbar & Start', label: 'Lock the Taskbar',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'LockTaskbar', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Taskbar & Start', label: 'Taskbar / Start Menu Settings Page',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoSetTaskbar', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Taskbar & Start', label: 'Run Command on Start Menu',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoRun', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Taskbar & Start', label: 'Search / Find on Start Menu',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoFind', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Taskbar & Start', label: 'Shutdown / Restart / Sleep Button',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoClose', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Taskbar & Start', label: 'Log Off on Start Menu',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'StartMenuLogOff', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Taskbar & Start', label: 'Change Start Menu / Taskbar Settings',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoChangeStartMenu', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Taskbar & Start', label: 'Tray / Balloon Notifications',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'TaskbarNoNotification', type: 'REG_DWORD', enable: '0', disable: '1' },
+
+            // ----- Display & Personalization -----
+            { category: 'Display', label: 'Change Desktop Wallpaper',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\ActiveDesktop', name: 'NoChangingWallPaper', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Display', label: 'Screen Saver Tab',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'NoDispScrSavPage', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Display', label: 'Desktop / Background Tab',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'NoDispBackgroundPage', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Display', label: 'Settings / Resolution Tab',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'NoDispSettingsPage', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Display', label: 'Appearance / Themes Tab',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'NoDispAppearancePage', type: 'REG_DWORD', enable: '0', disable: '1' },
+
+            // ----- System Tools -----
+            { category: 'System Tools', label: 'Task Manager',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'DisableTaskMgr', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'System Tools', label: 'Registry Editor (regedit)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'DisableRegistryTools', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'System Tools', label: 'Command Prompt (cmd.exe)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'DisableCMD', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'System Tools', label: 'Lock Workstation (Win+L)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'DisableLockWorkstation', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'System Tools', label: 'Change Password Option',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'DisableChangePassword', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'System Tools', label: 'Log Off Menu Item',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoLogoff', type: 'REG_DWORD', enable: '0', disable: '1' },
+
+            // ----- Security, Firewall & Antivirus -----
+            { category: 'Security', label: 'Firewall – Standard Profile',
+              path: 'SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\StandardProfile', name: 'EnableFirewall', type: 'REG_DWORD', enable: '1', disable: '0' },
+            { category: 'Security', label: 'Firewall – Domain Profile',
+              path: 'SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\DomainProfile', name: 'EnableFirewall', type: 'REG_DWORD', enable: '1', disable: '0' },
+            { category: 'Security', label: 'Firewall – Public Profile',
+              path: 'SOFTWARE\\Policies\\Microsoft\\WindowsFirewall\\PublicProfile', name: 'EnableFirewall', type: 'REG_DWORD', enable: '1', disable: '0' },
+            { category: 'Security', label: 'Windows Defender Antivirus',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Windows Defender', name: 'DisableAntiSpyware', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Security', label: 'Defender Real-Time Protection',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Windows Defender\\Real-Time Protection', name: 'DisableRealtimeMonitoring', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Security', label: 'User Account Control (UAC)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'EnableLUA', type: 'REG_DWORD', enable: '1', disable: '0' },
+            { category: 'Security', label: 'UAC Secure Desktop Dimming',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System', name: 'PromptOnSecureDesktop', type: 'REG_DWORD', enable: '1', disable: '0' },
+            { category: 'Security', label: 'SmartScreen Filter',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\System', name: 'EnableSmartScreen', type: 'REG_DWORD', enable: '1', disable: '0' },
+
+            // ----- Network & Internet -----
+            { category: 'Network', label: 'IPv6 Components (0=on, 0xff=disable all)',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\Tcpip6\\Parameters', name: 'DisabledComponents', type: 'REG_DWORD', enable: '0', disable: '0xff' },
+            { category: 'Network', label: 'Internet Proxy (1=proxy on, 0=off)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings', name: 'ProxyEnable', type: 'REG_DWORD', enable: '1', disable: '0' },
+            { category: 'Network', label: 'Network Connections Folder',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoNetConnectDisconnect', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Network', label: 'Network & Sharing Center',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoNetworkConnections', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Network', label: 'WLAN AutoConfig Service (Wi-Fi)',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\WlanSvc', name: 'Start', type: 'REG_DWORD', enable: '2', disable: '4' },
+            { category: 'Network', label: 'Wi-Fi Sense',
+              path: 'SOFTWARE\\Microsoft\\PolicyManager\\default\\WiFi\\AllowWiFiHotSpotReporting', name: 'value', type: 'REG_DWORD', enable: '1', disable: '0' },
+            { category: 'Network', label: 'Remote Desktop Connections',
+              path: 'SYSTEM\\CurrentControlSet\\Control\\Terminal Server', name: 'fDenyTSConnections', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Network', label: 'Remote Assistance',
+              path: 'SYSTEM\\CurrentControlSet\\Control\\Remote Assistance', name: 'fAllowToGetHelp', type: 'REG_DWORD', enable: '1', disable: '0' },
+            { category: 'Network', label: 'Remote Registry Service',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\RemoteRegistry', name: 'Start', type: 'REG_DWORD', enable: '3', disable: '4' },
+            { category: 'Network', label: 'Administrative Shares (C$, ADMIN$)',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters', name: 'AutoShareWks', type: 'REG_DWORD', enable: '1', disable: '0' },
+
+            // ----- Devices & Hardware -----
+            { category: 'Devices', label: 'USB Mass Storage (USB drives)',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\USBSTOR', name: 'Start', type: 'REG_DWORD', enable: '3', disable: '4' },
+            { category: 'Devices', label: 'Deny All Removable Storage Access',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\RemovableStorageDevices', name: 'Deny_All', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Devices', label: 'AutoRun / AutoPlay (all drive types)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoDriveTypeAutoRun', type: 'REG_DWORD', enable: '0', disable: '0xff' },
+            { category: 'Devices', label: 'Block Installation of New Devices',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\DeviceInstall\\Restrictions', name: 'DenyUnspecified', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Devices', label: 'Add Printer Wizard',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'NoAddPrinter', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Devices', label: 'Bluetooth Support Service',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\bthserv', name: 'Start', type: 'REG_DWORD', enable: '3', disable: '4' },
+            { category: 'Devices', label: 'Camera / Webcam Access',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Camera', name: 'AllowCamera', type: 'REG_DWORD', enable: '1', disable: '0' },
+            { category: 'Devices', label: 'Windows Audio Service (sound)',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\Audiosrv', name: 'Start', type: 'REG_DWORD', enable: '2', disable: '4' },
+
+            // ----- Keyboard & Mouse -----
+            { category: 'Keyboard & Mouse', label: 'Keyboard Device Driver (kbdclass) – disabling breaks keyboard',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\kbdclass', name: 'Start', type: 'REG_DWORD', enable: '1', disable: '4' },
+            { category: 'Keyboard & Mouse', label: 'Mouse Device Driver (mouclass) – disabling breaks mouse',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\mouclass', name: 'Start', type: 'REG_DWORD', enable: '1', disable: '4' },
+            { category: 'Keyboard & Mouse', label: 'Disable a Specific Key – Scancode Map (default = disable Caps Lock)',
+              path: 'SYSTEM\\CurrentControlSet\\Control\\Keyboard Layout', name: 'Scancode Map', type: 'REG_BINARY', enable: '00000000000000000100000000000000', disable: '00000000000000000200000000003a0000000000' },
+
+            // ----- Power & Sleep -----
+            { category: 'Power & Sleep', label: 'Monitor Sleep – Plugged In (seconds, 0=never)',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\7516b95f-f776-4464-8c53-06167f40cc99\\3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e', name: 'ACSettingIndex', type: 'REG_DWORD', enable: '0', disable: '600' },
+            { category: 'Power & Sleep', label: 'Monitor Sleep – On Battery (seconds, 0=never)',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\7516b95f-f776-4464-8c53-06167f40cc99\\3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e', name: 'DCSettingIndex', type: 'REG_DWORD', enable: '0', disable: '300' },
+            { category: 'Power & Sleep', label: 'System Sleep – Plugged In (seconds, 0=never)',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Power\\PowerSettings\\238c9fa8-0aad-41ed-83f4-97be242c8f20\\29f6c1db-86da-48c5-9fdb-f2b67b1f44da', name: 'ACSettingIndex', type: 'REG_DWORD', enable: '0', disable: '1800' },
+            { category: 'Power & Sleep', label: 'Fast Startup (hibernation-based boot)',
+              path: 'SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Power', name: 'HiberbootEnabled', type: 'REG_DWORD', enable: '1', disable: '0' },
+
+            // ----- Apps & Installation -----
+            { category: 'Apps & Install', label: 'Windows Installer (MSI packages)',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\Installer', name: 'DisableMSI', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Apps & Install', label: 'Enable App Allow/Block Mode (DisallowRun)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'DisallowRun', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Apps & Install', label: 'Block Notepad (DisallowRun list entry – needs mode above)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\DisallowRun', name: '1', type: 'REG_SZ', enable: '', disable: 'notepad.exe' },
+            { category: 'Apps & Install', label: 'Restrict to Allowed Apps Only (RestrictRun)',
+              path: 'SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer', name: 'RestrictRun', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Apps & Install', label: 'Microsoft Store',
+              path: 'SOFTWARE\\Policies\\Microsoft\\WindowsStore', name: 'RemoveWindowsStore', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Apps & Install', label: 'Cortana',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search', name: 'AllowCortana', type: 'REG_DWORD', enable: '1', disable: '0' },
+
+            // ----- Services & Updates -----
+            { category: 'Services & Updates', label: 'Windows Automatic Updates',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU', name: 'NoAutoUpdate', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Services & Updates', label: 'Windows Update Service (wuauserv)',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\wuauserv', name: 'Start', type: 'REG_DWORD', enable: '3', disable: '4' },
+            { category: 'Services & Updates', label: 'Task Scheduler Service',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\Schedule', name: 'Start', type: 'REG_DWORD', enable: '2', disable: '4' },
+            { category: 'Services & Updates', label: 'Windows Search / Indexing Service',
+              path: 'SYSTEM\\CurrentControlSet\\Services\\WSearch', name: 'Start', type: 'REG_DWORD', enable: '2', disable: '4' },
+            { category: 'Services & Updates', label: 'System Restore',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore', name: 'DisableSR', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Services & Updates', label: 'Windows Error Reporting',
+              path: 'SOFTWARE\\Microsoft\\Windows\\Windows Error Reporting', name: 'Disabled', type: 'REG_DWORD', enable: '0', disable: '1' },
+            { category: 'Services & Updates', label: 'Telemetry / Data Collection',
+              path: 'SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection', name: 'AllowTelemetry', type: 'REG_DWORD', enable: '1', disable: '0' },
+        ];
+
+        // ====================================================
+        // SCRIPT LOGIC
+        // ====================================================
+        const elPath = document.getElementById('regPath');
+        const elName = document.getElementById('valName');
+        const elType = document.getElementById('valType');
+        const elEnableVal = document.getElementById('enableVal');
+        const elDisableVal = document.getElementById('disableVal');
+        const elSeqList = document.getElementById('sequenceList');
+        const elSeqCount = document.getElementById('seqCount');
+        const elCode = document.getElementById('codeDisplay');
+        const elPresetSelect = document.getElementById('presetSelect');
+        const elQuickBtns = document.getElementById('quickPresets');
+
+        let sequence = [];
+
+        // ----- Populate dropdown and quick buttons -----
+        function populatePresets() {
+            // Group by category
+            const categories = {};
+            PRESETS.forEach(p => {
+                if (!categories[p.category]) categories[p.category] = [];
+                categories[p.category].push(p);
+            });
+
+            // Dropdown
+            let html = '';
+            for (const [cat, items] of Object.entries(categories)) {
+                html += `<optgroup label="${cat}">`;
+                items.forEach(p => {
+                    html += `<option value="${p.label}">${p.label}</option>`;
+                });
+                html += `</optgroup>`;
+            }
+            elPresetSelect.innerHTML = html;
+
+            // Quick buttons: first 12 most common or all? We'll put first 12.
+            const quick = PRESETS.slice(0, 15);
+            quick.forEach(p => {
+                const btn = document.createElement('button');
+                btn.textContent = p.label.replace(/\(.*\)/, '').trim();
+                btn.title = p.label;
+                btn.onclick = () => loadPreset(p);
+                elQuickBtns.appendChild(btn);
+            });
+        }
+
+        function loadPreset(preset) {
+            elPath.value = preset.path;
+            elName.value = preset.name;
+            elType.value = preset.type;
+            elEnableVal.value = preset.enable;
+            elDisableVal.value = preset.disable;
+            // highlight the dropdown selection
+            const opt = elPresetSelect.querySelector(`option[value="${preset.label}"]`);
+            if (opt) opt.selected = true;
+        }
+
+        function loadPresetFromDropdown() {
+            const label = elPresetSelect.value;
+            const preset = PRESETS.find(p => p.label === label);
+            if (preset) loadPreset(preset);
+            else alert('Preset not found.');
+        }
+
+        function getFormValues() {
+            return {
+                path: elPath.value.trim(),
+                name: elName.value.trim(),
+                type: elType.value,
+                enable: elEnableVal.value.trim(),
+                disable: elDisableVal.value.trim()
+            };
+        }
+
+        function addAction(action) {
+            const { path, name, type, enable, disable } = getFormValues();
+            if (!path || !name) {
+                alert('Please fill in both Registry Path and Value Name.');
+                return;
+            }
+            const value = (action === 'enable') ? enable : disable;
+            const isStringType = (type === 'REG_SZ' || type === 'REG_EXPAND_SZ');
+            // String values may legitimately be empty (e.g. clearing a Run entry);
+            // numeric/binary values must not be blank.
+            if (value === '' && !isStringType) {
+                alert('Please provide a value for the ' + action + ' action.');
+                return;
+            }
+            sequence.push({ action, path, name, type, value });
+            renderSequence();
+            generateCode();
+        }
+
+        function removeAction(index) {
+            sequence.splice(index, 1);
+            renderSequence();
+            generateCode();
+        }
+
+        function clearSequence() {
+            sequence = [];
+            renderSequence();
+            generateCode();
+        }
+
+        function renderSequence() {
+            elSeqCount.textContent = sequence.length;
+            if (sequence.length === 0) {
+                elSeqList.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">No actions added yet.</div>';
+                return;
+            }
+            let html = '';
+            sequence.forEach((item, idx) => {
+                const actionClass = item.action === 'enable' ? 'enable' : 'disable';
+                const badge = item.action === 'enable' ? '<span class="badge badge-enable">ENABLE</span>' : '<span class="badge badge-disable">DISABLE</span>';
+                html += `
+                    <div class="sequence-item">
+                        <span class="seq-index">#${idx+1}</span>
+                        <span class="seq-action ${actionClass}">
+                            ${badge} ${item.path} : ${item.name} = ${item.value} (${item.type})
+                        </span>
+                        <button class="btn-remove" onclick="removeAction(${idx})" style="flex:0; padding:2px 12px;">✖</button>
+                    </div>
+                `;
+            });
+            elSeqList.innerHTML = html;
+        }
+
+        function generateCode() {
+            if (sequence.length === 0) {
+                elCode.textContent = '// No actions – sequence is empty.';
+                return;
+            }
+            let code = `#include "DigiKeyboard.h"\n\n`;
+            code += `void setup() {\n`;
+            code += `  DigiKeyboard.delay(500);\n`;
+            code += `  DigiKeyboard.sendKeyStroke(KEY_R, MOD_GUI_LEFT);\n`;
+            code += `  DigiKeyboard.delay(500);\n\n`;
+
+            let commands = [];
+            sequence.forEach(item => {
+                // Quote string data so spaces and empty values stay valid; leave
+                // DWORD/BINARY data bare as reg.exe expects.
+                const isStringType = (item.type === 'REG_SZ' || item.type === 'REG_EXPAND_SZ');
+                const dataArg = isStringType ? `"${item.value}"` : item.value;
+                let regCmd = `reg add "HKLM\\${item.path}" /v "${item.name}" /t ${item.type} /d ${dataArg} /f`;
+                commands.push(regCmd);
+            });
+            let fullCmd = commands.join(' && ');
+            code += `  DigiKeyboard.print("${escapeString(fullCmd)}");\n`;
+            code += `  DigiKeyboard.delay(100);\n`;
+            code += `  DigiKeyboard.sendKeyStroke(KEY_ENTER);\n`;
+            code += `  DigiKeyboard.delay(1000);\n\n`;
+            code += `  DigiKeyboard.sendKeyStroke(KEY_F4, MOD_ALT_LEFT);\n`;
+            code += `  DigiKeyboard.delay(200);\n`;
+            code += `  DigiKeyboard.print("exit");\n`;
+            code += `  DigiKeyboard.sendKeyStroke(KEY_ENTER);\n\n`;
+            code += `  pinMode(1, OUTPUT);\n`;
+            code += `  digitalWrite(1, HIGH);\n`;
+            code += `}\n\nvoid loop() {}\n`;
+            elCode.textContent = code;
+        }
+
+        function escapeString(str) {
+            return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+        }
+
+        function copyCode() {
+            const code = elCode.textContent;
+            navigator.clipboard.writeText(code).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = code;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+            });
+            alert('Code copied to clipboard!');
+        }
+
+        // Initialize
+        populatePresets();
+        renderSequence();
+        generateCode();
+
+        // Load first preset as default (optional)
+        if (PRESETS.length) loadPreset(PRESETS[0]);
+    </script>
+</body>
+</html>
